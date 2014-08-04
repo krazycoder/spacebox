@@ -58,6 +58,10 @@ def get_size(dir_entry):
   return bytes
   
 def get_metadata(client, path):
+  # Read the client metadata information and construct a dictionary
+  # of type - 'name', 'path', 'bytes' and 'children'. Each object in
+  # the children list is internally an object of the same type. For
+  # files or leaf nodes w/o any children, we also capture their type.
   metadata = client.metadata(path)
   dir_path = metadata['path']
   result = {'name': str(os.path.basename(dir_path)),
@@ -83,6 +87,11 @@ def get_metadata(client, path):
 
 def get_data_by_contents(metadata, used_bytes):
   json_dict = {}
+  # Construct the JSON data in the format that HighCharts needs.
+  # The chart's data series is set to the root directory files.
+  # Thereafter, all sub-directories and files are mentioned in the
+  # drilldown section which are rendered as clickable options in
+  # the main chart.
   json_dict['root'] = []
   for child in metadata['children']:
     child_dict = {}
@@ -91,7 +100,8 @@ def get_data_by_contents(metadata, used_bytes):
     if child['children']:
       child_dict['drilldown'] = child['name']
     json_dict['root'].append(child_dict)
-
+  # Add drilldown information by traversing through all the nodes
+  # in the directory structure.
   q = Queue.Queue()
   q.put(metadata)
   json_dict['drilldowns'] = []
@@ -114,6 +124,7 @@ def get_data_by_contents(metadata, used_bytes):
 
 def get_data_by_types(metadata, used_bytes):
   type_dict = {}
+  # Aggregate the usage information based on the file types.
   q = Queue.Queue()
   q.put(metadata)
   while not q.empty():
@@ -129,7 +140,6 @@ def get_data_by_types(metadata, used_bytes):
     finally:
       for child in elem['children']:
         q.put(child)
-    
   type_list = []
   for type, size in type_dict.items():
     type_list.append([type, float((size * 100) / used_bytes)])
@@ -138,14 +148,15 @@ def get_data_by_types(metadata, used_bytes):
 def init_db():
   with app.app_context():
     db = get_db()
-    with app.open_resource("schema.sql", mode="r") as f:
+    with app.open_resource('schema.sql', mode='r') as f:
       db.cursor().executescript(f.read())
     db.commit()
 
 def get_db():
   top = _app_ctx_stack.top
   if not hasattr(top, 'sqlite_db'):
-    sqlite_db = sqlite3.connect(os.path.join(app.instance_path, app.config['DATABASE']))
+    sqlite_db = sqlite3.connect(
+        os.path.join(app.instance_path, app.config['DATABASE']))
     sqlite_db.row_factory = sqlite3.Row
     top.sqlite_db = sqlite_db
   return top.sqlite_db
@@ -155,7 +166,9 @@ def get_access_token():
   if username is None:
       return None
   db = get_db()
-  row = db.execute('SELECT access_token FROM users WHERE username = ?', [username]).fetchone()
+  row = db.execute(
+      'SELECT access_token FROM users WHERE username = ?',
+      [username]).fetchone()
   if row is None:
     return None
   return row[0]
@@ -169,7 +182,7 @@ def home():
   if access_token is not None:
     client = DropboxClient(access_token)
     account_info = client.account_info()
-    real_name = account_info["display_name"]
+    real_name = account_info['display_name']
   return render_template('index.html', real_name=real_name)
 
 @app.route('/dropbox-auth-finish')
@@ -189,7 +202,7 @@ def dropbox_auth_finish():
     flash('Not approved?  Why not')
     return redirect(url_for('home'))
   except DropboxOAuth2Flow.ProviderException, e:
-    app.logger.exception("Auth error" + e)
+    app.logger.exception('Auth error' + e)
     abort(403)
   db = get_db()
   data = [access_token, username]
@@ -209,7 +222,9 @@ def dropbox_logout():
   if username is None:
     abort(403)
   db = get_db()
-  db.execute('UPDATE users SET access_token = NULL WHERE username = ?', [username])
+  db.execute(
+      'UPDATE users SET access_token = NULL WHERE username = ?',
+      [username])
   db.commit()
   return redirect(url_for('home'))
 
@@ -225,13 +240,15 @@ def login():
     username = request.form['username']
     if username:
       db = get_db()
-      db.execute('INSERT OR IGNORE INTO users (username) VALUES (?)', [username])
+      db.execute(
+          'INSERT OR IGNORE INTO users (username) VALUES (?)',
+          [username])
       db.commit()
       session['user'] = username
       flash('You were logged in')
       return redirect(url_for('home'))
     else:
-      flash("You must provide a username")
+      flash('You must provide a username')
   return render_template('login.html', error=error)
 
 @app.route('/logout')
