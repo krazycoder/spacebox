@@ -150,7 +150,13 @@ def home():
 @app.route('/dropbox-auth-finish')
 def dropbox_auth_finish():
   try:
-    access_token, user_id, url_state = get_auth_flow().finish(request.args)
+    error = request.args.get('error')
+    if error is not None:
+      raise DropboxOAuth2Flow.NotApprovedException()
+    code = request.args.get('code')
+    state = request.args.get('state')
+    access_token, user_id, url_state = get_auth_flow().finish(
+        {'code':code, 'state':state})
   except DropboxOAuth2Flow.BadRequestException, e:
     abort(400)
   except DropboxOAuth2Flow.BadStateException, e:
