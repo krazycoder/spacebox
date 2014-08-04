@@ -12,11 +12,11 @@ from flask import Flask, request, session, g, redirect, url_for, abort, \
 
 from dropbox.client import DropboxClient, DropboxOAuth2Flow
 
-# configuration
 DEBUG = True
 DATABASE = 'app.db'
 SECRET_KEY = 'development key'
 
+# Fill this in!
 DROPBOX_APP_KEY = 'nd17zk0ho91g30n'
 DROPBOX_APP_SECRET = 'g28lix8n4w26so4'
 
@@ -57,13 +57,12 @@ def get_size(dir_entry):
     bytes = dir_entry['bytes']
   return bytes
   
-def walk(client, path):
+def get_metadata(client, path):
   metadata = client.metadata(path)
   dir_path = metadata['path']
   result = {'name': str(os.path.basename(dir_path)),
             'path': dir_path,
             'bytes': 0,
-            'modified': '',
             'children': []}
   if 'contents' in metadata:
     for dir_entry in metadata['contents']:
@@ -71,31 +70,30 @@ def walk(client, path):
       dir_entry_bytes = dir_entry['bytes']
       modified = dir_entry['modified']
       if dir_entry_bytes is 0:
-        child = walk(client, path)
+        child = get_metadata(client, path)
       else:
         child = {'name': str(os.path.basename(path)),
                  'path': path,
                  'bytes': dir_entry_bytes,
-                 'modified': dir_entry['modified'],
                  'type': str(dir_entry['mime_type'].split('/')[0]),
                  'children': []}
       result['children'].append(child)
     result['bytes'] = get_size(result)
   return result
 
-def outputContentJSON(result, total_used_bytes):
+def get_data_by_contents(metadata, used_bytes):
   json_dict = {}
   json_dict['root'] = []
-  for child in result['children']:
+  for child in metadata['children']:
     child_dict = {}
     child_dict['name'] = child['name']
-    child_dict['y'] = float((child['bytes'] * 100) / total_used_bytes)
+    child_dict['y'] = float((child['bytes'] * 100) / used_bytes)
     if child['children']:
       child_dict['drilldown'] = child['name']
     json_dict['root'].append(child_dict)
 
   q = Queue.Queue()
-  q.put(result)
+  q.put(metadata)
   json_dict['drilldowns'] = []
   while not q.empty():
     drilldown_dict = {}
@@ -106,7 +104,7 @@ def outputContentJSON(result, total_used_bytes):
     for child in elem['children']:
       child_dict = {}
       child_dict['name'] = child['name']
-      child_dict['y'] = float((child['bytes'] * 100) / total_used_bytes)
+      child_dict['y'] = float((child['bytes'] * 100) / used_bytes)
       if child['children']:
         child_dict['drilldown'] = child['name']
       drilldown_dict['data'].append(child_dict)
@@ -114,10 +112,10 @@ def outputContentJSON(result, total_used_bytes):
     json_dict['drilldowns'].append(drilldown_dict)
   return json.JSONEncoder().encode(json_dict)
 
-def outputTypeJSON(result, total_used_bytes):
+def get_data_by_types(metadata, used_bytes):
   type_dict = {}
   q = Queue.Queue()
-  q.put(result)
+  q.put(metadata)
   while not q.empty():
     elem = q.get()
     try:
@@ -134,7 +132,7 @@ def outputTypeJSON(result, total_used_bytes):
     
   type_list = []
   for type, size in type_dict.items():
-    type_list.append([type, float((size * 100) / total_used_bytes)])
+    type_list.append([type, float((size * 100) / used_bytes)])
   return json.JSONEncoder().encode(type_list)
 
 def init_db():
@@ -150,7 +148,6 @@ def get_db():
     sqlite_db = sqlite3.connect(os.path.join(app.instance_path, app.config['DATABASE']))
     sqlite_db.row_factory = sqlite3.Row
     top.sqlite_db = sqlite_db
-
   return top.sqlite_db
 
 def get_access_token():
@@ -169,7 +166,6 @@ def home():
     return redirect(url_for('login'))
   access_token = get_access_token()
   real_name = None
-  app.logger.info('access token = %r', access_token)
   if access_token is not None:
     client = DropboxClient(access_token)
     account_info = client.account_info()
@@ -250,11 +246,11 @@ def dashboard():
     return redirect(url_for('login'))
   access_token = get_access_token()
   client = DropboxClient(access_token)
-  used, quota = quota_info(client)
+  used_bytes, quota_bytes = quota_info(client)
   return render_template('dashboard.html',
-                         used=human_readable(used),
-                         quota=human_readable(quota),
-                         utilization=float((used * 100) / quota))
+                         used=human_readable(used_bytes),
+                         quota=human_readable(quota_bytes),
+                         utilization=float((used_bytes * 100) / quota_bytes))
 
 @app.route('/contents')
 def contents():
@@ -262,9 +258,9 @@ def contents():
     return redirect(url_for('login'))
   access_token = get_access_token()
   client = DropboxClient(access_token)
-  used, quota = quota_info(client)
-  result = walk(client, '')
-  return outputContentJSON(result, used)
+  used_bytes, _ = quota_info(client)
+  metadata = get_metadata(client, '')
+  return get_data_by_contents(metadata, used_bytes)
 
 @app.route('/types')
 def types():
@@ -272,9 +268,9 @@ def types():
     return redirect(url_for('login'))
   access_token = get_access_token()
   client = DropboxClient(access_token)
-  used, quota = quota_info(client)
-  result = walk(client, '')
-  return outputTypeJSON(result, used)
+  used_bytes, _ = quota_info(client)
+  metadata = get_metadata(client, '')
+  return get_data_by_types(metadata, used_bytes)
 
 def main():
   init_db()
