@@ -17,8 +17,8 @@ DATABASE = 'app.db'
 SECRET_KEY = 'development key'
 
 # Fill this in!
-DROPBOX_APP_KEY = 'nd17zk0ho91g30n'
-DROPBOX_APP_SECRET = 'g28lix8n4w26so4'
+DROPBOX_APP_KEY = ''
+DROPBOX_APP_SECRET = ''
 
 app = Flask(__name__)
 app.config.from_object(__name__)
