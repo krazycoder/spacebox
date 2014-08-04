@@ -98,6 +98,7 @@
     });
   </script>
   <div id="acc_info" align="center">
+    <div><a href="{{ url_for('home') }}">Back</a></div>
     <div>{{ used }} of {{ quota }} used [{{ utilization }}%]</div>
     <progress value={{ utilization }} max="100"></progress>
   </div>
