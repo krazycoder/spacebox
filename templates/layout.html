@@ -12,16 +12,6 @@
       <div>Spacebox</div>
     </div>
     </h1>
-    <div class=metanav>
-    {% if not session.user %}
-      <a href="{{ url_for('login') }}">Login</a>
-    {% else %}
-      <a href="{{ url_for('logout') }}">Logout</a>
-    {% endif %}
-    </div>
-    {% for message in get_flashed_messages() %}
-      <div class=flash>{{ message }}</div>
-    {% endfor %}
     {% block body %}{% endblock %}
   </div>
 </body>
