@@ -48,6 +48,12 @@
         }
       };
 
+      $.getJSON('contents', function(data) {
+        structure_chart.series[0].data = data['root'];
+        structure_chart.drilldown.series = data['drilldowns'];
+        var chart = new Highcharts.Chart(structure_chart);
+      });
+
       var type_chart = {
         chart: {
           renderTo: 'type_chart',
@@ -79,24 +85,19 @@
           pointFormat: '<span style="color:{point.color}">{point.name}</span>: <b>{point.y:.2f}%</b> of total<br/>'
         }, 
         series: [{
-          name: '/dropbox',
+          name: 'File Types',
           colorByPoint: true,
           data: []
         }],
       };
 
-      $.getJSON('contents', function(data) {
-        structure_chart.series[0].data = data['root'];
-        structure_chart.drilldown.series = data['drilldowns'];
-        var chart1 = new Highcharts.Chart(structure_chart);
-      });
-
       $.getJSON('types', function(data) {
         type_chart.series[0].data = data;
-        var chart2 = new Highcharts.Chart(type_chart);
+        var chart = new Highcharts.Chart(type_chart);
       });
     });
   </script>
+
   <div id="acc_info" align="center">
     <div><a href="{{ url_for('home') }}">Back</a></div>
     <div>{{ used }} of {{ quota }} used [{{ utilization }}%]</div>
