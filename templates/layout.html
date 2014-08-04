@@ -1,0 +1,29 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>Spacebox - Dropbox</title>
+  <link href="https://dt8kf6553cww8.cloudfront.net/static/images/favicon-vflk5FiAC.ico" rel="shortcut icon" />
+  <link href="https://dt8kf6553cww8.cloudfront.net/static/css/main-vflD4FwWq.css" type="text/css" rel="stylesheet" />
+  <div class=page>
+    <h1>
+    <div id="header" align="center">
+      <img src="https://dt8kf6553cww8.cloudfront.net/static/images/favicon-vflk5FiAC.ico" />
+      <div>Spacebox</div>
+    </div>
+    </h1>
+    <div class=metanav>
+    {% if not session.user %}
+      <a href="{{ url_for('login') }}">Login</a>
+    {% else %}
+      <a href="{{ url_for('logout') }}">Logout</a>
+    {% endif %}
+    </div>
+    {% for message in get_flashed_messages() %}
+      <div class=flash>{{ message }}</div>
+    {% endfor %}
+    {% block body %}{% endblock %}
+  </div>
+</body>
+</head>
+</html>

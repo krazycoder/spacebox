@@ -1,0 +1,114 @@
+{% extends "layout.html" %}
+{% block body %}
+  <link href="https://dt8kf6553cww8.cloudfront.net/static/css/main-vflD4FwWq.css" type="text/css" rel="stylesheet" />
+
+  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+  <script src="http://code.highcharts.com/highcharts.js"></script>
+  <script src="http://code.highcharts.com/modules/drilldown.js"></script>
+  <script type="text/javascript">
+
+    $(document).ready(function() {
+      var structure_chart = {
+        chart: {
+          renderTo: 'structure_chart',
+          defaultSeriesType: 'pie',
+        },
+        title: {
+          text: 'Usage Stats',
+        },
+        subtitle: {
+          text: 'by directory structure'
+        },
+        plotOptions: {
+          pie: {
+            allowPointSelect: true,
+            cursor: 'pointer',
+            dataLabels: {
+              enabled: true,
+            }
+          },
+          series: {
+            dataLabels: {
+              enabled: true,
+              format: '{point.name}: {point.y:.1f}%'
+            }
+          }
+        },
+        tooltip: {
+          headerFormat: '<span style="font-size:11px">{series.name}</span><br>',
+          pointFormat: '<span style="color:{point.color}">{point.name}</span>: <b>{point.y:.2f}%</b> of total<br/>'
+        }, 
+        series: [{
+          name: '/root',
+          colorByPoint: true,
+          data: []
+        }],
+        drilldown: {
+          series: []
+        }
+      };
+
+      var type_chart = {
+        chart: {
+          renderTo: 'type_chart',
+          defaultSeriesType: 'pie',
+        },
+        title: {
+          text: 'Usage Stats',
+        },
+        subtitle: {
+          text: 'by file types'
+        },
+        plotOptions: {
+          pie: {
+            allowPointSelect: true,
+            cursor: 'pointer',
+            dataLabels: {
+              enabled: true,
+            }
+          },
+          series: {
+            dataLabels: {
+              enabled: true,
+              format: '{point.name}: {point.y:.1f}%'
+            }
+          }
+        },
+        tooltip: {
+          headerFormat: '<span style="font-size:11px">{series.name}</span><br>',
+          pointFormat: '<span style="color:{point.color}">{point.name}</span>: <b>{point.y:.2f}%</b> of total<br/>'
+        }, 
+        series: [{
+          name: '/root',
+          colorByPoint: true,
+          data: []
+        }],
+      };
+
+      $.getJSON('contents', function(data) {
+        structure_chart.series[0].data = data['root'];
+        structure_chart.drilldown.series = data['drilldowns'];
+        var chart1 = new Highcharts.Chart(structure_chart);
+      });
+
+      $.getJSON('types', function(data) {
+        type_chart.series[0].data = data;
+        var chart2 = new Highcharts.Chart(type_chart);
+      });
+    });
+  </script>
+  <div id="acc_info" align="center">
+    <div>{{ used }} of {{ quota }} used [{{ utilization }}%]</div>
+    <progress value={{ utilization }} max="100"></progress>
+  </div>
+  <table align=center>
+    <tr>
+      <td>
+       <div id="structure_chart" style="min-width: 300px; width: 600px; max-width: 600px; height: 400px; display:inline margin:0 auto"></div>
+      </td>
+      <td>
+        <div id="type_chart" style="min-width: 300px; width: 600px; max-width: 600px; height: 400px; display:inline margin:0 auto"></div>
+      </td>
+    </tr>
+  </table>
+{% endblock %}
