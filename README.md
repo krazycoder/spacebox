@@ -1,6 +1,6 @@
 Spacebox
 ========
-![Demo](/demo.png"Demo")
+![Demo](/demo.png "Demo")
 Welcome to Spacebox - space analyzer app for Dropbox!
 
 #### How to run it
