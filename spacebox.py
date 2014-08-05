@@ -174,7 +174,8 @@ def dropbox_auth_finish():
 
 @app.route('/dropbox-auth-start')
 def dropbox_auth_start():
-  return redirect(get_auth_flow().start())
+  authorize_url = get_auth_flow().start()
+  return redirect(authorize_url)
 
 @app.route('/dropbox-logout')
 def dropbox_logout():
