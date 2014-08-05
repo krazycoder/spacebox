@@ -15,8 +15,9 @@ DEBUG = True
 SECRET_KEY = 'development key'
 
 # Fill this in!
-DROPBOX_APP_KEY = 'nd17zk0ho91g30n'
-DROPBOX_APP_SECRET = 'g28lix8n4w26so4'
+DROPBOX_APP_KEY = ''
+DROPBOX_APP_SECRET = ''
+DROPBOX_APP_REDIRECT = ''
 
 app = Flask(__name__)
 app.config.from_object(__name__)
@@ -150,17 +151,11 @@ def home():
 @app.route('/dropbox-auth-finish')
 def dropbox_auth_finish():
   try:
-    error = request.args.get('error')
-    if error is not None:
-      raise DropboxOAuth2Flow.NotApprovedException()
-    code = request.args.get('code')
-    state = request.args.get('state')
-    access_token, user_id, url_state = get_auth_flow().finish(
-        {'code':code, 'state':state})
+    access_token, user_id, url_state = get_dropbox_auth_flow(session).finish(request.args)
   except DropboxOAuth2Flow.BadRequestException, e:
     abort(400)
   except DropboxOAuth2Flow.BadStateException, e:
-    abort(400)
+    return redirect('/dropbox-auth-start')
   except DropboxOAuth2Flow.CsrfException, e:
     abort(403)
   except DropboxOAuth2Flow.NotApprovedException, e:
@@ -170,22 +165,22 @@ def dropbox_auth_finish():
     app.logger.exception('Auth error' + e)
     abort(403)
   session['access_token'] = access_token
-  return redirect(url_for('home'))
+  return redirect(url_for('dashboard'))
 
 @app.route('/dropbox-auth-start')
 def dropbox_auth_start():
-  authorize_url = get_auth_flow().start()
+  authorize_url = get_dropbox_auth_flow(session).start()
   return redirect(authorize_url)
 
 @app.route('/dropbox-logout')
 def dropbox_logout():
   session['access_token'] = None
+  session['dropbox-auth-csrf-token'] = None
   return redirect(url_for('home'))
 
-def get_auth_flow():
-  redirect_uri = url_for('dropbox_auth_finish', _external=True)
-  return DropboxOAuth2Flow(DROPBOX_APP_KEY, DROPBOX_APP_SECRET, redirect_uri,
-                           session, 'dropbox-auth-csrf-token')
+def get_dropbox_auth_flow(web_session):
+  return DropboxOAuth2Flow(DROPBOX_APP_KEY, DROPBOX_APP_SECRET, DROPBOX_APP_REDIRECT,
+                           web_session, 'dropbox-auth-csrf-token')
 
 @app.route('/dashboard')
 def dashboard():
